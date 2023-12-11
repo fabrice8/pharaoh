@@ -1,130 +1,108 @@
-import 'dart:async';
+import 'package:spanner/spanner.dart';
 
-import '../http/request.dart';
-import 'handler.dart';
-import 'route.dart';
+import 'router_contract.dart';
+import 'router_handler.dart';
 
-const basePath = '/';
+typedef _PendingRouteIntent = (HTTPMethod method, ({String path, Middleware handler}));
 
-abstract interface class RoutePathDefinitionContract<T> {
-  T get(String path, RequestHandlerFunc handler);
+class GroupRouter extends RouterContract {
+  final List<_PendingRouteIntent> _pendingRouteIntents = [];
 
-  T post(String path, RequestHandlerFunc handler);
-
-  T put(String path, RequestHandlerFunc handler);
-
-  T delete(String path, RequestHandlerFunc handler);
-
-  T head(String path, RequestHandlerFunc handler);
-
-  T patch(String path, RequestHandlerFunc handler);
-
-  T options(String path, RequestHandlerFunc handler);
-
-  T trace(String path, RequestHandlerFunc handler);
-
-  T use(HandlerFunc reqResNext, [Route? route]);
-}
-
-mixin RouterMixin<T extends RouteHandler> on RouteHandler
-    implements RoutePathDefinitionContract<T> {
-  RouteGroup _group = RouteGroup.path(basePath);
-
-  List<Route> get routes => _group.handlers.map((e) => e.route).toList();
+  List<_PendingRouteIntent> get routes => _pendingRouteIntents;
 
   @override
-  Route get route => Route(_group.prefix, [HTTPMethod.ALL]);
-
-  @override
-  T prefix(String prefix) {
-    _group = _group.withPrefix(prefix);
-    return this as T;
+  GroupRouter delete(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.DELETE,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
   }
 
   @override
-  Future<HandlerResult> handle(ReqRes reqRes) async {
-    final handlers = _group.findHandlers(reqRes.req);
-    if (handlers.isEmpty) {
-      return (
-        canNext: true,
-        reqRes: (req: reqRes.req, res: reqRes.res.notFound())
-      );
+  GroupRouter get(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.GET,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter head(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.HEAD,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter options(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.OPTIONS,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter patch(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.PATCH,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter post(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.POST,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter put(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.PUT,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter trace(String path, RequestHandler hdler) {
+    _pendingRouteIntents.add((
+      HTTPMethod.TRACE,
+      (path: path, handler: useRequestHandler(hdler)),
+    ));
+    return this;
+  }
+
+  @override
+  GroupRouter use(Middleware mdw) {
+    _pendingRouteIntents.add((HTTPMethod.ALL, (path: '*', handler: mdw)));
+    return this;
+  }
+
+  @override
+  GroupRouter on(String path, Middleware func, {HTTPMethod method = HTTPMethod.ALL}) {
+    if (method == HTTPMethod.ALL) path = '$path/*';
+    _pendingRouteIntents.add((method, (path: path, handler: func)));
+    return this;
+  }
+
+  void commit(String prefix, Spanner spanner) {
+    for (final intent in _pendingRouteIntents) {
+      final handler = intent.$2.handler;
+      if (intent.$1 == HTTPMethod.ALL) {
+        spanner.addMiddleware(prefix, handler);
+      } else {
+        spanner.addRoute(intent.$1, '$prefix${intent.$2.path}', handler);
+      }
     }
-
-    final handlerFncs = List<RouteHandler>.from(handlers);
-
-    ReqRes result = reqRes;
-    bool canNext = false;
-    while (handlerFncs.isNotEmpty) {
-      final handler = handlerFncs.removeAt(0);
-      final data = await handler.handle(reqRes);
-      result = data.reqRes;
-      canNext = data.canNext;
-
-      final breakOut = result.res.ended || !canNext;
-      if (breakOut) return (canNext: true, reqRes: result);
-    }
-
-    return (canNext: canNext, reqRes: result);
   }
-
-  @override
-  T get(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(
-        handler, Route(path, [HTTPMethod.GET, HTTPMethod.HEAD])));
-    return this as T;
-  }
-
-  @override
-  T post(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.POST])));
-    return this as T;
-  }
-
-  @override
-  T put(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.PUT])));
-    return this as T;
-  }
-
-  @override
-  T delete(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.DELETE])));
-    return this as T;
-  }
-
-  @override
-  T head(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.HEAD])));
-    return this as T;
-  }
-
-  @override
-  T patch(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.PATCH])));
-    return this as T;
-  }
-
-  @override
-  T options(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.OPTIONS])));
-    return this as T;
-  }
-
-  @override
-  T trace(String path, RequestHandlerFunc handler) {
-    _group.add(RequestHandler(handler, Route(path, [HTTPMethod.TRACE])));
-    return this as T;
-  }
-
-  @override
-  T use(HandlerFunc reqResNext, [Route? route]) {
-    _group.add(Middleware(reqResNext, route ?? Route.any()));
-    return this as T;
-  }
-}
-
-class PharaohRouter extends RouteHandler with RouterMixin<PharaohRouter> {
-  @override
-  HandlerFunc get handler => (req, res, next) => (req: req, res: res, next);
 }

@@ -4,13 +4,13 @@
 [![Pub Version](https://img.shields.io/pub/v/pharaoh?color=green)](https://pub.dev/packages/pharaoh)
 [![popularity](https://img.shields.io/pub/popularity/pharaoh?logo=dart)](https://pub.dev/packages/pharaoh/score)
 [![likes](https://img.shields.io/pub/likes/pharaoh?logo=dart)](https://pub.dev/packages/pharaoh/score)
-[![style: flutter lints](https://img.shields.io/badge/linter-dart__lints-blue)](https://pub.dev/packages/lints)
+[![melos](https://img.shields.io/badge/maintained%20with-melos-f700ff.svg?style=flat-square)](https://github.com/invertase/melos)
 
 ## Features
 
 - Robust routing
 - Focus on high performance
-- Super-high test coverage _(need more hands, peep the issues and contribute)_
+- Super-high test coverage
 - HTTP helpers (just like ExpressJS)
 - Interoperability with Shelf Middlewares [See here](./packages/pharaoh/SHELF_INTEROP.md)
 
@@ -20,7 +20,7 @@ In your pubspec.yaml
 
 ```yaml
 dependencies:
-  pharaoh: ^0.0.4 # requires Dart => ^3.0.0
+  pharaoh: ^0.0.5 # requires Dart => ^3.0.0
 ```
 
 ## Basic Usage:
@@ -37,9 +37,9 @@ void main() async {
   app.get('/foo', (req, res) => res.ok("bar"));
 
   final guestRouter = app.router()
-    .get('/user', (req, res) => res.ok("Hello World"))
-    .post('/post', (req, res) => res.json({"mee": "moo"}))
-    .put('/put', (req, res) => res.json({"pookey": "reyrey"}));
+    ..get('/user', (req, res) => res.ok("Hello World"))
+    ..post('/post', (req, res) => res.json({"mee": "moo"}))
+    ..put('/put', (req, res) => res.json({"pookey": "reyrey"}));
 
   app.group('/guest', guestRouter);
 
@@ -60,13 +60,26 @@ The Pharaoh project welcomes all constructive contributions. Contributions take 
 from code for bug fixes and enhancements, to additions and fixes to documentation, additional
 tests, triaging incoming pull requests and issues, and more!
 
-### Running Tests
+### Contributing Code To Pharaoh 🛠
 
-To run the test suite, first install the dependencies, then run `dart test`:
+To setup and contribute to Pharaoh, Install [`Melos`](https://melos.invertase.dev/~melos-latest) as a global package via [`pub.dev`](https://pub.dev/packages/melos);
 
 ```console
-$ dart pub get
-$ dart test
+$ dart pub global activate melos
+```
+
+then initialize the workspace using the command below
+
+```console
+$ melos bootstrap
+```
+
+### Running Tests
+
+To run the tests, you can either run `dart test` in the package you're working on or use the command below to run the full test suite:
+
+```console
+$ melos run tests
 ```
 
 ## People

@@ -1,4 +1,8 @@
 **/pubspec_overrides.yaml
 .idea
 .dart_tool
+.vscode
 melos_pharaoh.iml
+**/pubspec.lock
+
+**/melos_**
